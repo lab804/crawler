@@ -24,11 +24,11 @@ def captcha(url):
             f.write(resp.content)
             return True
         except Exception as e:
-            print("erro ao salvar o captcha: %s" % e)
+            print("Erro ao salvar o captcha: %s" % e)
             return False
 
 def url_complete(urlsite, state, cities):
-    """ trata os dados coletados e mundo a url completa"""
+    """ trata os dados coletados, completa a url e verifica o download da img do captcha"""
     urlimagem = 'http://150.163.255.234/salvar/mapainterativo/securimage/securimage_show.php'
     path = formating(urlsite, state, cities)
     print(path)
@@ -40,8 +40,8 @@ def url_complete(urlsite, state, cities):
             response = session.get(finalurl)
             if response.status_code == 200:
                 write_file(cap)
-                rename_file(cap)
-                print(response.content)
+                namecap = 'cap/'+cap+'.jpg'
+                os.rename('captcha.jpg', namecap)
             else:
                 print("Deu pau, tente novamente...")
         else:
@@ -50,18 +50,13 @@ def url_complete(urlsite, state, cities):
         print("%s '%s'" % (e, url))
 
 def formating(urlsite, state, c):
-    """formata path a partir dos dados coletaods"""
+    """formata path a partir dos dados coletados"""
     cities = c.replace(" ", "+")
     print(cities)
     base = '?idUF={est}&idCidade={city}&edMes=2&edAno=2017&edNome=Barbara&edEmail=barbara%40lab804.com.br&palavra='
     baseurl = base.format(est=state, city=cities)
     urlpath = urlsite+baseurl
     return urlpath
-
-def rename_file(cap_code):
-    """renomeia arquivo captcha com nome-codigo"""
-    namecap = 'cap/'+cap_code+'.jpg'
-    os.rename('captcha.jpg', namecap)
 
 def write_file(cap_code):
     """registra os codigos do captcha atual ao final do arquivo csv"""
