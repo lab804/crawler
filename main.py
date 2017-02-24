@@ -62,9 +62,8 @@ def write_file(cap_code):
     """registra os codigos do captcha atual ao final do arquivo csv"""
     try:
         arq = open('captcha.csv','a+')
-        arq.writelines('\n'+cap_code)
+        arq.writelines(cap_code+'\n')
         print("Registro gravado com sucesso")
-        arq.close()
     except IOError:
         print("Erro ao abrir o arquivo!")
 
