@@ -18,8 +18,3 @@ with open('2629_SP_2017_2.csv', 'rb') as csvfile:
 
 del data[0]
 print(data)
-
-
-    site = 'http://150.163.255.234/salvar/mapainterativo/downpluv.php'
-    basename = '?idUF=SP&idCidade=ITAPETININGA&edMes=2&edAno=2017&edNome=Barbara&edEmail=barbara%40lab804.com.br&palavra='
-    url = site + basename
