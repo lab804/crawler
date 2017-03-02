@@ -7,7 +7,7 @@ def open_file(filename):
 
     if os.path.isfile(filename):
         if os.path.getsize(filename) > 0:
-            readfile(filename)
+            read_file(filename)
         else:
             print("Erro: Arquivo vazio")
     else:
@@ -15,7 +15,7 @@ def open_file(filename):
 
 
 
-def readfile(filename):
+def read_file(filename):
 
     data = []
     keys = open(filename, "r").readline().strip().split(";")
@@ -37,6 +37,4 @@ def readfile(filename):
 if __name__ == "__main__":
     print("CTRL+C para sair")
 
-    while True:
-        open_file('2625_SP_2017_2.csv')
-        print("----------------------------------------------------------------------------------------------------------------------")
+        open_file('2629_SP_2017_2.csv')
