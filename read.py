@@ -4,7 +4,7 @@ import csv
 import os
 
 def open_file(filename):
-
+    """Responsavel por abrir o arquivo e verificar se o arquivo existe. Caso exista, verifica se nao esta vazio"""
     if os.path.isfile(filename):
         if os.path.getsize(filename) > 0:
             read_file(filename)
@@ -16,7 +16,7 @@ def open_file(filename):
 
 
 def read_file(filename):
-
+    """Responsavel por realizar a leitura dos dados no arquivo. Verifica se esta corrompido ou caso esteja faltando dados"""
     data = []
     keys = open(filename, "r").readline().strip().split(";")
     if keys[0] == 'municipio':
