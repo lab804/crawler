@@ -19,22 +19,28 @@ def read_file(filename):
 
     data = []
     keys = open(filename, "r").readline().strip().split(";")
-
-    with open('2629_SP_2017_2.csv', 'rb') as csvfile:
-         for book in csvfile.readlines():
-             b = book.strip().replace(b"\t", b"")
-             b_as_list = b.split(b";")
-             book_dict = {}
-             for valor in b_as_list:
-                 if valor:
-                     book_dict[keys[b_as_list.index(valor)]] = valor
-             data.append(book_dict)
-
-    del data[0]
-    print(data)
+    if keys[0] == 'municipio':
+        with open('2629_SP_2017_2.csv', 'rb') as csvfile:
+             for book in csvfile.readlines():
+                 if book:
+                     print("Arquivo nao contem dados")
+                 else:
+                     b = book.strip().replace(b"\t", b"")
+                     b_as_list = b.split(b";")
+                     book_dict = {}
+                     for valor in b_as_list:
+                         if valor:
+                             book_dict[keys[b_as_list.index(valor)]] = valor
+                     data.append(book_dict)
+             del data[0]
+             print(data)
+    else:
+        print("Arquivo corrompido ou já baixado")
 
 
 if __name__ == "__main__":
     print("CTRL+C para sair")
 
-        open_file('2629_SP_2017_2.csv')
+    filename = '2629_SP_2017_2.csv'
+
+    open_file(filename)
