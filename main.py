@@ -7,11 +7,12 @@ import os
 class RequestFile(object):
 
     def __init__(self):
+        """Inicializa as variáveis necessárias da classe e a sessao"""
         self.session = requests.Session()
         self.urlsite = 'http://150.163.255.234/salvar/mapainterativo/downpluv.php'
 
     def start(self):
-        """ Start na captura de dados e captcha pela url"""
+        """Inicia a captura de dados e o captcha atraves da url"""
         response = self.session.get(self.urlsite)
         cities_state = re.findall('\(\"(\w{2})\"\,\"(.*?)\"\,\"(\d+)\"', response.text)
         for cities in cities_state:
@@ -59,7 +60,7 @@ class RequestFile(object):
         """Formada path com os dados de cidade e estado de acordo com a lista gerado por Start()"""
         cities = c.replace(" ", "+")
         print(cities)
-        base = '?idUF={est}&idCidade={city}&edMes=1&edAno=2017&edNome=Barbara&edEmail=barbara%40lab804.com.br&palavra='
+        base = '?idUF={est}&idCidade={city}&edMes=2&edAno=2017&edNome=Barbara&edEmail=scraping.camaden%40gmail.com&palavra='
         baseurl = base.format(est=state, city=cities)
         urlpath = urlsite+baseurl
         return urlpath
