@@ -1,12 +1,19 @@
 #!/usr/bin/env python3
 # -*- coding: utf-8 -*-
+# -*- coding: iso-8859-1 -*-
 
 import requests
-import re
-import os
+import re, os
+import imaplib
+import getpass
 
 # sessao global
 session = requests.Session()
+
+IMAP_SERVER = 'imap.gmail.com'
+IMAP_PORT = '993'
+FROM = '(FROM "dados_pcd@cemaden.gov.br")'
+EMAIL_ADDRESS = "dados_pcd@cemaden.gov.br"
 
 def acessa_site(url):
     """acessa o site para gerar a sessao"""
@@ -57,23 +64,40 @@ def salva_captcha_bd(cap_code):
         arq = open('captcha.csv','a+')
         arq.writelines(cap_code+'\n')
         print("Registro gravado com sucesso")
+        arq.close()
     except IOError:
         print("Erro ao abrir o arquivo!")
 
 def salva_captcha_img(cap_code):
-        namecap = 'cap/'+cap_code+'.jpg'
-        os.rename('captcha.jpg', namecap)
-        print("Arquivo salvo com sucesso")
+    namecap = 'cap/'+cap_code+'.jpg'
+    os.rename('captcha.jpg', namecap)
+    print("Arquivo salvo com sucesso")
 
-def ler_email(email, senha):
+def login_email(imap, email, senha):
+    imap.login(email, senha)
+    imap.select('Inbox')
+
+def ler_email(imap, link_re, num):
     """ler os emails para capturar os que links que possuem
     o dowload do arquivo csv"""
-    pass
+    status, data = imap.fetch(num, '(RFC822)')
+    print ('Message %s\n%s\n' % (num, data[0][1]))
+    return data[0][1]
 
 def download_arquivo(url):
     """realiza o download do arquivo que contem
     os dados metereologicos daquela estacao"""
-    pass
+    linkname = url.split('/')[-1]
+    local_filename = ('arq/'+linkname+'.csv')
+    r = session.get(url, stream=True)
+    with open(local_filename, 'wb') as f:
+        for chunk in r.iter_content(chunk_size=1024):
+            if chunk:
+                f.write(chunk)
+                f.close()
+                return True
+            else:
+                return False
 
 def ler_arquivo(content):
     """le o arquivo e checa se tem conteudo"""
@@ -97,6 +121,8 @@ def main():
     """funcao principal"""
     base_url = "http://150.163.255.234/salvar/mapainterativo/downpluv.php"
     url_img = 'http://150.163.255.234/salvar/mapainterativo/securimage/securimage_show.php'
+    imap_username = 'scraping.camaden@gmail.com'
+    link_re = re.compile(b'href=\'(.*)?\'')
     content = acessa_site(base_url)
     if not content:
         return
@@ -117,7 +143,24 @@ def main():
                 else:
                     print("Ops! nao foi possivel baixar o captcha, cheque a url ou se algo mudou no site.")
             except requests.exceptions.HTTPError as e:
-                print("%s '%s'" % (e, url))
+            print("%s '%s'" % (e, url))
+    imap = imaplib.IMAP4_SSL(IMAP_SERVER, IMAP_PORT)
+    imap_password = getpass.getpass("Enter your password --> ")
+    login_email(imap, imap_username, imap_password)
+    status, data = imap.search(None, FROM)
+    for num in reversed(data[0].split()):
+        data = ler_email(imap, link_re, num)
+        link_download = link_re.findall(data)
+        url_str= (b''.join(link_download).decode())
+        print(url_str)
+        isdownload = download_arquivo(url_str)
+        if isdownload:
+            print("Sucesso no download do arquivo")
+            imap.store(num, '+FLAGS', r'\Deleted')
+            imap.expunge()
+            print("Email excluido")
+        else:
+            print("Erro no download do arquivo, o email nao será excluido. Tente novamente.")
 
 if __name__ == "__main__":
     main()
