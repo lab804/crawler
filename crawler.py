@@ -95,13 +95,37 @@ def download_arquivo(url):
             if chunk:
                 f.write(chunk)
                 f.close()
-                return True
+                return local_filename
             else:
                 return False
 
 def ler_arquivo(content):
     """le o arquivo e checa se tem conteudo"""
-    pass
+    if os.path.isfile(content):
+        if os.path.getsize(content) > 0:
+            keys = open(content, "r").readline().strip().split(";" or "\n")
+            if keys[0] == 'municipio':
+                data_file = []
+                with open(content, 'rb') as csvfile:
+                    for line in csvfile.readlines():
+                        b = line.strip().replace(b"\t", b"")
+                        b_as_list = b.split(b";")
+                        dic = {}
+                        for data in b_as_list:
+                            if data:
+                                dic[keys[b_as_list.index(data)]] = data
+                        data_file.append(dic)
+                if len(data_file) < 2:
+                    print ("Arquivo nao contem dados. Verifique se ha dados no site!")
+                else:
+                    del data_file[0]
+                    print(data_file)
+            else:
+                print("Download já foi realizado ou a sessao expirou!")
+        else:
+            print("Arquivo vazio!")
+    else:
+        print("Arquivo nao existe. Verifique se o nome ou diretório esta correto!")
 
 def parsea_dados(content):
     """limpamos os dados e estruturamos de uma forma
@@ -143,24 +167,25 @@ def main():
                 else:
                     print("Ops! nao foi possivel baixar o captcha, cheque a url ou se algo mudou no site.")
             except requests.exceptions.HTTPError as e:
-            print("%s '%s'" % (e, url))
-    imap = imaplib.IMAP4_SSL(IMAP_SERVER, IMAP_PORT)
-    imap_password = getpass.getpass("Enter your password --> ")
-    login_email(imap, imap_username, imap_password)
-    status, data = imap.search(None, FROM)
-    for num in reversed(data[0].split()):
-        data = ler_email(imap, link_re, num)
-        link_download = link_re.findall(data)
-        url_str= (b''.join(link_download).decode())
-        print(url_str)
-        isdownload = download_arquivo(url_str)
-        if isdownload:
-            print("Sucesso no download do arquivo")
-            imap.store(num, '+FLAGS', r'\Deleted')
-            imap.expunge()
-            print("Email excluido")
-        else:
-            print("Erro no download do arquivo, o email nao será excluido. Tente novamente.")
+                    print("%s '%s'" % (e, url))
+        imap = imaplib.IMAP4_SSL(IMAP_SERVER, IMAP_PORT)
+        imap_password = getpass.getpass("Enter your password --> ")
+        login_email(imap, imap_username, imap_password)
+        status, data = imap.search(None, FROM)
+        for num in reversed(data[0].split()):
+            data = ler_email(imap, link_re, num)
+            link_download = link_re.findall(data)
+            url_str= (b''.join(link_download).decode())
+            print(url_str)
+            isdownload = download_arquivo(url_str)
+            if isdownload:
+                print("Sucesso no download do arquivo")
+                imap.store(num, '+FLAGS', r'\Deleted')
+                imap.expunge()
+                print("Email excluido")
+                ler_arquivo(isdownload)
+            else:
+                print("Erro no download do arquivo, o email nao será excluido. Tente novamente.")
 
 if __name__ == "__main__":
     main()

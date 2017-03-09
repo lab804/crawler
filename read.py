@@ -40,8 +40,11 @@ class ReadFile(object):
                     if data:
                         dic[keys[b_as_list.index(data)]] = data
                 data_file.append(dic)
-        del data_file[0]
-        print(data_file)
+        if len(data_file) < 2:
+            print ("Arquivo nao contem dados. Verifique se ha dados no site!")
+        else:
+            del data_file[0]
+            print(data_file)
 
     def open_file(self):
         """Responsável por abrir e verificar o arquivo. Dentre as
