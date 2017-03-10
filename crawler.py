@@ -1,6 +1,4 @@
 #!/usr/bin/env python3
-# -*- coding: utf-8 -*-
-# -*- coding: iso-8859-1 -*-
 
 import requests
 import re, os
@@ -25,12 +23,14 @@ def acessa_site(url):
         return req.content
 
 def organiza_dados(content, base_url):
-    cities_state = re.findall('\(\"(\w{2})\"\,\"(.*?)\"\,\"(\d+)\"', content)
+    cities_state = re.findall(b'\(\"(\w{2})\"\,\"(.*?)\"\,\"(\d+)\"', content)
     return cities_state
 
 def formata_url_path(base_url, state, c):
-    cities = c.replace(" ", "+")
+    cities = c.replace(b" ", b"+")
+    state = state.decode('utf-8')
     print(state)
+    cities = cities.decode('utf-8')
     print(cities)
     base = '?idUF={est}&idCidade={city}&edMes=2&edAno=2017&edNome=Barbara&edEmail=scraping.camaden%40gmail.com&palavra='
     baseurl = base.format(est=state, city=cities)
@@ -52,10 +52,9 @@ def preenche_formulario(formulario):
     """preenche formulario para receber o email"""
     response = session.get(formulario)
     if response.status_code == 200:
-        print(response.content)
         return True
     else:
-        print("Deu pau, tente novamente...")
+        print("Formulario contem erros. Tente novamente...")
         return False
 
 def salva_captcha_bd(cap_code):
@@ -63,19 +62,23 @@ def salva_captcha_bd(cap_code):
     try:
         arq = open('captcha.csv','a+')
         arq.writelines(cap_code+'\n')
-        print("Registro gravado com sucesso")
+        print("Registro do captcha gravado com sucesso")
         arq.close()
     except IOError:
-        print("Erro ao abrir o arquivo!")
+        print("Erro ao abrir o arquivo captcha!")
 
 def salva_captcha_img(cap_code):
     namecap = 'cap/'+cap_code+'.jpg'
     os.rename('captcha.jpg', namecap)
-    print("Arquivo salvo com sucesso")
+    print("Imagem captcha salva com sucesso")
 
 def login_email(imap, email, senha):
     imap.login(email, senha)
     imap.select('Inbox')
+
+def verifica_novo_email(imap):
+    status, data = imap.search(None, FROM)
+    return sum(1 for num in data[0].split())
 
 def ler_email(imap, link_re, num):
     """ler os emails para capturar os que links que possuem
@@ -105,21 +108,7 @@ def ler_arquivo(content):
         if os.path.getsize(content) > 0:
             keys = open(content, "r").readline().strip().split(";" or "\n")
             if keys[0] == 'municipio':
-                data_file = []
-                with open(content, 'rb') as csvfile:
-                    for line in csvfile.readlines():
-                        b = line.strip().replace(b"\t", b"")
-                        b_as_list = b.split(b";")
-                        dic = {}
-                        for data in b_as_list:
-                            if data:
-                                dic[keys[b_as_list.index(data)]] = data
-                        data_file.append(dic)
-                if len(data_file) < 2:
-                    print ("Arquivo nao contem dados. Verifique se ha dados no site!")
-                else:
-                    del data_file[0]
-                    print(data_file)
+                return keys
             else:
                 print("Download já foi realizado ou a sessao expirou!")
         else:
@@ -127,10 +116,24 @@ def ler_arquivo(content):
     else:
         print("Arquivo nao existe. Verifique se o nome ou diretório esta correto!")
 
-def parsea_dados(content):
+def parsea_dados(keys, content):
     """limpamos os dados e estruturamos de uma forma
     que se encaixe no banco de dados"""
-    pass
+    data_file = []
+    with open(content, 'rb') as csvfile:
+        for line in csvfile.readlines():
+            b = line.strip().replace(b"\t", b"")
+            b_as_list = b.split(b";")
+            dic = {}
+            for data in b_as_list:
+                if data:
+                    dic[keys[b_as_list.index(data)]] = data
+            data_file.append(dic)
+    if len(data_file) < 2:
+        print ("Arquivo nao contem dados. Verifique se ha dados no site!")
+    else:
+        del data_file[0]
+        print(data_file)
 
 def ultima_data():
     """retorna dicionario com o ultimo documento inserido
@@ -157,7 +160,8 @@ def main():
             try:
                 iscaptcha = captura_captcha(url_img)
                 if iscaptcha:
-                    cap = raw_input("Me fale as letras senhorita? ")
+                    cap = input("Me fale as letras senhorita? ")
+                    print (cap)
                     url_final = url_format+cap
                     print(url_final)
                     isget = preenche_formulario(url_final)
@@ -168,9 +172,11 @@ def main():
                     print("Ops! nao foi possivel baixar o captcha, cheque a url ou se algo mudou no site.")
             except requests.exceptions.HTTPError as e:
                     print("%s '%s'" % (e, url))
-        imap = imaplib.IMAP4_SSL(IMAP_SERVER, IMAP_PORT)
-        imap_password = getpass.getpass("Enter your password --> ")
-        login_email(imap, imap_username, imap_password)
+    imap = imaplib.IMAP4_SSL(IMAP_SERVER, IMAP_PORT)
+    imap_password = getpass.getpass("Enter your password --> ")
+    login_email(imap, imap_username, imap_password)
+    inbox = verifica_novo_email(imap)
+    if inbox != 0:
         status, data = imap.search(None, FROM)
         for num in reversed(data[0].split()):
             data = ler_email(imap, link_re, num)
@@ -183,9 +189,13 @@ def main():
                 imap.store(num, '+FLAGS', r'\Deleted')
                 imap.expunge()
                 print("Email excluido")
-                ler_arquivo(isdownload)
+                isvalid = ler_arquivo(isdownload)
+                if isvalid:
+                    parsea_dados(isvalid, isdownload)
             else:
                 print("Erro no download do arquivo, o email nao será excluido. Tente novamente.")
+    else:
+        print("Nao ha emails na caixa de entrada!")
 
 if __name__ == "__main__":
     main()
