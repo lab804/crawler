@@ -25,10 +25,12 @@ def acessa_site(url):
         return req.content
 
 def organiza_dados(content, base_url):
+    """organiza com expressao regular os dados(cidade e estado) capturados no site """
     cities_state = re.findall('\(\"(\w{2})\"\,\"(.*?)\"\,\"(\d+)\"', content)
     return cities_state
 
 def formata_url_path(base_url, state, c):
+    """formata a path da url com os dados colhidos e organizados"""
     cities = c.replace(" ", "+")
     print(state)
     print(cities)
@@ -38,6 +40,7 @@ def formata_url_path(base_url, state, c):
     return url_path
 
 def captura_captcha(url):
+    """captura o captcha referente a sessao atual e o salva genericamente"""
     fname = 'captcha.jpg'
     resp = session.get(url)
     with open(fname, 'wb') as f:
@@ -69,11 +72,13 @@ def salva_captcha_bd(cap_code):
         print("Erro ao abrir o arquivo!")
 
 def salva_captcha_img(cap_code):
+    """salva o arquivo imagem captcha na pasta cap / seu nome é o proprio codigo captcha"""
     namecap = 'cap/'+cap_code+'.jpg'
     os.rename('captcha.jpg', namecap)
     print("Arquivo salvo com sucesso")
 
 def login_email(imap, email, senha):
+    """faz o login no gmail"""
     imap.login(email, senha)
     imap.select('Inbox')
 
