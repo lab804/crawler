@@ -101,31 +101,6 @@ def download_arquivo(url):
 
 def ler_arquivo(content):
     """le o arquivo e checa se tem conteudo"""
-    if os.path.isfile(content):
-        if os.path.getsize(content) > 0:
-            keys = open(content, "r").readline().strip().split(";" or "\n")
-            if keys[0] == 'municipio':
-                data_file = []
-                with open(content, 'rb') as csvfile:
-                    for line in csvfile.readlines():
-                        b = line.strip().replace(b"\t", b"")
-                        b_as_list = b.split(b";")
-                        dic = {}
-                        for data in b_as_list:
-                            if data:
-                                dic[keys[b_as_list.index(data)]] = data
-                        data_file.append(dic)
-                if len(data_file) < 2:
-                    print ("Arquivo nao contem dados. Verifique se ha dados no site!")
-                else:
-                    del data_file[0]
-                    print(data_file)
-            else:
-                print("Download já foi realizado ou a sessao expirou!")
-        else:
-            print("Arquivo vazio!")
-    else:
-        print("Arquivo nao existe. Verifique se o nome ou diretório esta correto!")
 
 def parsea_dados(content):
     """limpamos os dados e estruturamos de uma forma
@@ -183,7 +158,6 @@ def main():
                 imap.store(num, '+FLAGS', r'\Deleted')
                 imap.expunge()
                 print("Email excluido")
-                ler_arquivo(isdownload)
             else:
                 print("Erro no download do arquivo, o email nao será excluido. Tente novamente.")
 
