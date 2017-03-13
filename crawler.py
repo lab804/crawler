@@ -116,7 +116,7 @@ def ler_arquivo(content):
             if keys[0] == 'municipio':
                 return keys
             else:
-                print("Download já foi realizado ou a sessao expirou!")
+                print("Arquivo nao foi lido. Download já foi realizado ou a sessao expirou!")
         else:
             print("Arquivo vazio!")
     else:
@@ -142,10 +142,17 @@ def parsea_dados(keys, content):
         print(data_file)
         return data_file
 
-def ultima_data():
+def ultima_data(collection):
     """retorna dicionario com o ultimo documento inserido
     no banco de dados"""
-    pass
+    results = collection.find()
+    # print(results)
+    # if results.count()>0:
+    for record in results:
+        print(record['nomeEstacao'] + ',',record['uf'] + ',',record['municipio'] + ',',record['codEstacao'] + ',',record['longitude'] + ',',record['datahora'] + ',',record['latitude'] + ',',record['valorMedida'])
+    #         return True
+    # else:
+    #     return False
 
 def conecta_mongodb():
     try:
@@ -153,10 +160,7 @@ def conecta_mongodb():
         client = MongoClient(MONGO_HOST, MONGO_PORT)
         db = client[DOCUMENT_NAME]
         collection = db[COLLECTION_NAME]
-        database_info.append(client)
-        database_info.append(db)
-        database_info.append(collection)
-        return database_info
+        return collection
     except Exception as e:
         print("Erro ao inserir dados")
         print(e)
@@ -165,8 +169,8 @@ def conecta_mongodb():
 def inserir_dados(collection, documento):
     """insere o documento no banco de dados"""
     try:
-        result = collection.insert_one(data).insert_id
-        print("%d As posicoes foram salvas "%s" colecao, no documento "%s" com sucesso" % (len(result.inserted_ids), COLLECTION_NAME, DOCUMENT_NAME))
+        for dados in documento:
+            collection.insert(dados)
         return True
     except Exception as e:
         print("Erro ao inserir dados")
@@ -180,61 +184,67 @@ def main():
     imap_username = 'scraping.camaden@gmail.com'
     link_re = re.compile(b'href=\'(.*)?\'')
     content = acessa_site(base_url)
-    if not content:
-        return
-    else:
-        cities = organiza_dados(content, base_url)
-        for city in cities:
-            url_format = formata_url_path(base_url, city[0], city[1])
-            try:
-                iscaptcha = captura_captcha(url_img)
-                if iscaptcha:
-                    cap = input("Me fale as letras senhorita? ")
-                    print (cap)
-                    url_final = url_format+cap
-                    print(url_final)
-                    isget = preenche_formulario(url_final)
-                    if isget:
-                        salva_captcha_img(cap)
-                        salva_captcha_bd(cap)
-                else:
-                    print("Ops! nao foi possivel baixar o captcha, cheque a url ou se algo mudou no site.")
-            except requests.exceptions.HTTPError as e:
-                    print("%s '%s'" % (e, url))
-    imap = imaplib.IMAP4_SSL(IMAP_SERVER, IMAP_PORT)
-    imap_password = getpass.getpass("Enter your password --> ")
-    login_email(imap, imap_username, imap_password)
-    inbox = verifica_novo_email(imap)
-    if inbox != 0:
-        status, data = imap.search(None, FROM)
-        for num in reversed(data[0].split()):
-            data = ler_email(imap, link_re, num)
-            link_download = link_re.findall(data)
-            url_str= (b''.join(link_download).decode())
-            print(url_str)
-            isdownload = download_arquivo(url_str)
-            if isdownload:
-                print("Sucesso no download do arquivo")
-                imap.store(num, '+FLAGS', r'\Deleted')
-                imap.expunge()
-                print("Email excluido")
-                isvalid = ler_arquivo(isdownload)
-                if isvalid:
-                    dados = parsea_dados(isvalid, isdownload)
-                    database = conecta_mongodb()
-                    for dado in dados:
-                        if database:
-                            registrar = inserir_dados(database, dado)
-                            if registrar:
-                                print("Dados inseridos com sucesso no MongoDB")
-                            else:
-                                print("Ocorreu um erro na insercao do dados no MongoDB")
-                        else:
-                            print("Erro ao se conectar com o MongoDB")
-            else:
-                print("Erro no download do arquivo, o email nao será excluido. Tente novamente.")
-    else:
-        print("Nao ha emails na caixa de entrada!")
+    # if not content:
+    #     return
+    # else:
+        # cities = organiza_dados(content, base_url)
+        # for city in cities:
+        #     url_format = formata_url_path(base_url, city[0], city[1])
+        #     try:
+        #         iscaptcha = captura_captcha(url_img)
+        #         if iscaptcha:
+        #             cap = input("Me fale as letras senhorita? ")
+        #             print (cap)
+        #             url_final = url_format+cap
+        #             print(url_final)
+        #             isget = preenche_formulario(url_final)
+        #             if isget:
+        #                 salva_captcha_img(cap)
+        #                 salva_captcha_bd(cap)
+        #         else:
+        #             print("Ops! nao foi possivel baixar o captcha, cheque a url ou se algo mudou no site.")
+        #     except requests.exceptions.HTTPError as e:
+        #             print("%s '%s'" % (e, url))
+        # imap = imaplib.IMAP4_SSL(IMAP_SERVER, IMAP_PORT)
+        # imap_password = getpass.getpass("Enter your password --> ")
+        # login_email(imap, imap_username, imap_password)
+        # inbox = verifica_novo_email(imap)
+        # if inbox != 0:
+        #     status, data = imap.search(None, FROM)
+        #     for num in reversed(data[0].split()):
+        #         data = ler_email(imap, link_re, num)
+        #         link_download = link_re.findall(data)
+        #         url_str= (b''.join(link_download).decode())
+        #         print(url_str)
+        #         isdownload = download_arquivo(url_str)
+        #         if isdownload:
+        #             print("Sucesso no download do arquivo")
+        #             isvalid = ler_arquivo(isdownload)
+        #             if isvalid:
+    database = conecta_mongodb()
+        #                 if database:
+        #                     # busca_registro = ultima_data(database)
+        #                     # if not busca_registro:
+        #                     dados = parsea_dados(isvalid, isdownload)
+        #                     registrar = inserir_dados(database, dados)
+        #                     if registrar:
+        #                         print("Dados inseridos com sucesso no MongoDB")
+        #                         imap.store(num, '+FLAGS', r'\Deleted')
+        #                         imap.expunge()
+        #                         print("Email contendo arquivo dos dados inseridos foi excluido")
+        #                     else:
+        #                             print("Ocorreu um erro na insercao do dados no MongoDB")
+        #                     # else:
+        #                     #     print("Ultimo registro encontrado")
+        #                     #     print(busca_registro)
+        #                 else:
+        #                     print("Erro ao se conectar com o MongoDB")
+        #         else:
+        #             print("Erro no download do arquivo, o email nao será excluido. Tente novamente.")
+        # else:
+        #     print("Nao ha emails na caixa de entrada!")
+    ultima_data(database)
+
 
 if __name__ == "__main__":
     main()
