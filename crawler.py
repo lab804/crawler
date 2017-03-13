@@ -4,6 +4,7 @@ import requests
 import re, os
 import imaplib
 import getpass
+from pymongo import MongoClient
 
 # sessao global
 session = requests.Session()
@@ -12,6 +13,11 @@ IMAP_SERVER = 'imap.gmail.com'
 IMAP_PORT = '993'
 FROM = '(FROM "dados_pcd@cemaden.gov.br")'
 EMAIL_ADDRESS = "dados_pcd@cemaden.gov.br"
+MONGO_HOST = 'localhost'
+MONGO_PORT = 27017
+DOCUMENT_NAME = 'test'
+COLLECTION_NAME = 'service'
+
 
 def acessa_site(url):
     """acessa o site para gerar a sessao"""
@@ -134,15 +140,38 @@ def parsea_dados(keys, content):
     else:
         del data_file[0]
         print(data_file)
+        return data_file
 
 def ultima_data():
     """retorna dicionario com o ultimo documento inserido
     no banco de dados"""
     pass
 
-def inserir_dados(documento):
+def conecta_mongodb():
+    try:
+        database_info=[]
+        client = MongoClient(MONGO_HOST, MONGO_PORT)
+        db = client[DOCUMENT_NAME]
+        collection = db[COLLECTION_NAME]
+        database_info.append(client)
+        database_info.append(db)
+        database_info.append(collection)
+        return database_info
+    except Exception as e:
+        print("Erro ao inserir dados")
+        print(e)
+        return False
+
+def inserir_dados(collection, documento):
     """insere o documento no banco de dados"""
-    pass
+    try:
+        result = collection.insert_one(data).insert_id
+        print("%d As posicoes foram salvas "%s" colecao, no documento "%s" com sucesso" % (len(result.inserted_ids), COLLECTION_NAME, DOCUMENT_NAME))
+        return True
+    except Exception as e:
+        print("Erro ao inserir dados")
+        print(e)
+        return False
 
 def main():
     """funcao principal"""
@@ -191,7 +220,17 @@ def main():
                 print("Email excluido")
                 isvalid = ler_arquivo(isdownload)
                 if isvalid:
-                    parsea_dados(isvalid, isdownload)
+                    dados = parsea_dados(isvalid, isdownload)
+                    database = conecta_mongodb()
+                    for dado in dados:
+                        if database:
+                            registrar = inserir_dados(database, dado)
+                            if registrar:
+                                print("Dados inseridos com sucesso no MongoDB")
+                            else:
+                                print("Ocorreu um erro na insercao do dados no MongoDB")
+                        else:
+                            print("Erro ao se conectar com o MongoDB")
             else:
                 print("Erro no download do arquivo, o email nao será excluido. Tente novamente.")
     else:
