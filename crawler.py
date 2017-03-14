@@ -35,9 +35,9 @@ def organiza_dados(content, base_url):
 
 def formata_url_path(base_url, state, c):
     cities = c.replace(b" ", b"+")
-    state = state.decode('utf-8')
+    state = state.decode()
     print(state)
-    cities = cities.decode('utf-8')
+    cities = cities.decode()
     print(cities)
     base = '?idUF={est}&idCidade={city}&edMes=2&edAno=2017&edNome=Barbara&edEmail=scraping.camaden%40gmail.com&palavra='
     baseurl = base.format(est=state, city=cities)
@@ -140,7 +140,7 @@ def parsea_dados(keys, content):
             dic = {}
             for data in b_as_list:
                 if data:
-                    dec = data.decode('utf-8')
+                    dec = data.decode()
                     dic[keys[b_as_list.index(data)]] = dec
             data_file.append(dic)
     if len(data_file) < 2:
@@ -149,6 +149,20 @@ def parsea_dados(keys, content):
         del data_file[0]
         print(data_file)
         return data_file
+
+def busca_registro(registro, data_hora=None):
+    "busca no arquivo csv o dado anterior salvo no banco de dados: caso\
+    tenha sucesso, apaga os dados anteriores; caso contrario, returna erro"
+    for item in registro:
+        print(item)
+        print(data_hora)
+        if data_hora:
+        # if item['datahora'] == data_hora:
+            print("Achei esta ultima data")
+            return True
+        else:
+            print("Nao achei esta ultima data")
+            return False
 
 def conecta_mongodb():
     try:
@@ -186,7 +200,7 @@ def inserir_dados(collection, documento):
             collection.insert(dados)
         return True
     except Exception as e:
-        print("Erro ao inserir dados")
+        print("Erro ao inserir os dados")
         print(e)
         return False
 
@@ -229,15 +243,15 @@ def main():
                 data = ler_email(imap, link_re, num)
                 link_download = link_re.findall(data)
                 url_str= (b''.join(link_download).decode())
-                # print(url_str)
                 isdownload = download_arquivo(url_str)
                 if isdownload:
                     print("Sucesso no download do arquivo csv")
                     isvalid = ler_arquivo(isdownload, num, imap)
                     if isvalid:
                         if database:
-                            busca_registro = ultima_data(database)
-                            if not busca_registro:
+                            ultimo_registro = ultima_data(database)
+                            if not ultimo_registro:
+                                print("Não ha registros anteriores no MongoDB. O arquivo de dados será lido por completo!")
                                 dados = parsea_dados(isvalid, isdownload)
                                 registrar = inserir_dados(database, dados)
                                 if registrar:
@@ -248,7 +262,20 @@ def main():
                                 else:
                                     print("Ocorreu um erro na insercao do dados no MongoDB")
                             else:
-                                print("Ultimo registro encontrado")
+                                print("Ultimo registro encontrado. O arquivo de dados será lido a partir da ultima data registrada no MongoDB")
+                                dados = parsea_dados(isvalid, isdownload)
+                                registro = busca_registro(dados, ultimo_registro)
+                                if registro:
+                                    registrar = inserir_dados(database, dados)
+                                    if registrar:
+                                        print("Dados inseridos com sucesso no MongoDB")
+                                        imap.store(num, '+FLAGS', r'\Deleted')
+                                        imap.expunge()
+                                        print("Email contendo arquivo dos dados inseridos foi excluido")
+                                    else:
+                                        print("Ocorreu um erro na insercao do dados no MongoDB")
+                                else:
+                                    print("A busca pelo dados do ultimo registro nao teve sucesso!")
                         else:
                             print("Erro ao se conectar com o MongoDB")
                 else:
