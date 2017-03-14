@@ -16,9 +16,6 @@ FROM = '(FROM "dados_pcd@cemaden.gov.br")'
 EMAIL_ADDRESS = "dados_pcd@cemaden.gov.br"
 MONGO_HOST = 'localhost'
 MONGO_PORT = 27017
-DOCUMENT_NAME = 'test'
-COLLECTION_NAME = 'service'
-
 
 def acessa_site(url):
     """acessa o site para gerar a sessao"""
@@ -121,12 +118,8 @@ def ler_arquivo(content, num, imap):
                 print("Arquivo nao foi lido. Download já foi realizado ou a sessao expirou!")
         else:
             print("Arquivo vazio!")
-
     else:
         print("Arquivo nao existe. Verifique se o nome ou diretório esta correto!")
-
-    imap.store(num, '+FLAGS', r'\Deleted')
-    imap.expunge()
     return False
 
 def parsea_dados(keys, content):
@@ -147,14 +140,40 @@ def parsea_dados(keys, content):
         print ("Arquivo nao contem dados. Verifique se ha dados no site!")
     else:
         del data_file[0]
-        print(data_file)
+        # print(data_file)
         return data_file
+
+def conecta_mongodb(document_name, collection_name):
+    try:
+        database_info=[]
+        client = pymongo.MongoClient(MONGO_HOST, MONGO_PORT)
+        db = client[document_name]
+        collection = db[collection_name]
+        return collection
+    except Exception as e:
+        print("Erro ao inserir dados")
+        print(e)
+        return False
+
+def ultima_data(collection):
+     """retorna dicionario com o ultimo documento inserido
+     no banco de dados"""
+     results = collection.find().limit(2).sort([("datahora", pymongo.DESCENDING)])
+     if results.count()>0:
+         for record in results:
+             return record
+     else:
+         return False
 
 def busca_registro(registro, data_hora=None):
     "busca no arquivo csv o dado anterior salvo no banco de dados: caso\
     tenha sucesso, apaga os dados anteriores; caso contrario, returna erro"
     for item in registro:
+        print ('+++++++++++++++++++item +++++++++++++++++++++++++')
         print(item)
+        item = item['datahora']
+        print(item)
+        print ('+++++++++++++++++++++ data hora+++++++++++++++++++++++')
         print(data_hora)
         if data_hora:
         # if item['datahora'] == data_hora:
@@ -163,30 +182,6 @@ def busca_registro(registro, data_hora=None):
         else:
             print("Nao achei esta ultima data")
             return False
-
-def conecta_mongodb():
-    try:
-        database_info=[]
-        client = pymongo.MongoClient(MONGO_HOST, MONGO_PORT)
-        db = client[DOCUMENT_NAME]
-        collection = db[COLLECTION_NAME]
-        return collection
-    except Exception as e:
-        print("Erro ao inserir dados")
-        print(e)
-        return False
-
-def ultima_data(collection):
-    """retorna dicionario com o ultimo documento inserido
-    no banco de dados"""
-    results = collection.find().limit(2).sort([("datahora", pymongo.DESCENDING)])
-    if results.count()>0:
-        for record in results:
-            record = record['datahora'].decode()
-            print(record)
-            return record
-    else:
-        return False
 
 def imprime_mongodb(collection):
     cursor = collection.find({})
@@ -204,13 +199,21 @@ def inserir_dados(collection, documento):
         print(e)
         return False
 
+def deletar_email(registrar, imap, num):
+    if registrar:
+        print("Dados inseridos com sucesso no MongoDB")
+        imap.store(num, '+FLAGS', r'\Deleted')
+        imap.expunge()
+        print("Email contendo arquivo dos dados inseridos foi excluido")
+    else:
+        print("Ocorreu um erro na insercao do dados no MongoDB")
+
 def main():
     """funcao principal"""
     base_url = "http://150.163.255.234/salvar/mapainterativo/downpluv.php"
     url_img = 'http://150.163.255.234/salvar/mapainterativo/securimage/securimage_show.php'
     imap_username = 'scraping.camaden@gmail.com'
     link_re = re.compile(b'href=\'(.*)?\'')
-    database = conecta_mongodb()
     content = acessa_site(base_url)
     if not content:
         return
@@ -248,38 +251,29 @@ def main():
                     print("Sucesso no download do arquivo csv")
                     isvalid = ler_arquivo(isdownload, num, imap)
                     if isvalid:
+                        document_name = 'teste'
+                        collection_name = 'service'
+                        database = conecta_mongodb(document_name, collection_name)
                         if database:
                             ultimo_registro = ultima_data(database)
+                            dados = parsea_dados(isvalid, isdownload)
+                            # print(dados)
                             if not ultimo_registro:
                                 print("Não ha registros anteriores no MongoDB. O arquivo de dados será lido por completo!")
-                                dados = parsea_dados(isvalid, isdownload)
                                 registrar = inserir_dados(database, dados)
-                                if registrar:
-                                    print("Dados inseridos com sucesso no MongoDB")
-                                    imap.store(num, '+FLAGS', r'\Deleted')
-                                    imap.expunge()
-                                    print("Email contendo arquivo dos dados inseridos foi excluido")
-                                else:
-                                    print("Ocorreu um erro na insercao do dados no MongoDB")
+                                deletar_email(registrar, imap, num)
                             else:
                                 print("Ultimo registro encontrado. O arquivo de dados será lido a partir da ultima data registrada no MongoDB")
-                                dados = parsea_dados(isvalid, isdownload)
                                 registro = busca_registro(dados, ultimo_registro)
                                 if registro:
                                     registrar = inserir_dados(database, dados)
-                                    if registrar:
-                                        print("Dados inseridos com sucesso no MongoDB")
-                                        imap.store(num, '+FLAGS', r'\Deleted')
-                                        imap.expunge()
-                                        print("Email contendo arquivo dos dados inseridos foi excluido")
-                                    else:
-                                        print("Ocorreu um erro na insercao do dados no MongoDB")
+                                    deletar_email(registrar, imap, num)
                                 else:
                                     print("A busca pelo dados do ultimo registro nao teve sucesso!")
                         else:
                             print("Erro ao se conectar com o MongoDB")
-                else:
-                    print("Arquivo invalido")
+                    else:
+                        print("Arquivo invalido")
         else:
             print("Nao ha emails na caixa de entrada!")
 
