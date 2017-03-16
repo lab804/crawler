@@ -6,6 +6,8 @@ import imaplib
 import getpass
 from pprint import pprint
 import pymongo
+import dateutil.parser as parser
+import datetime
 
 # sessao global
 session = requests.Session()
@@ -134,7 +136,16 @@ def parsea_dados(keys, content):
             for data in b_as_list:
                 if data:
                     dec = data.decode()
-                    dic[keys[b_as_list.index(data)]] = dec
+                    if date.findall()
+                    if len(dec) == 21:
+                        print("funcionou")
+                        date = (parser.parse(dec))
+                        print(date.isoformat())
+                        dh = date.isoformat()
+                        dic[keys[b_as_list.index(data)]] = dh
+                    else:
+                        dec = data.decode()
+                        dic[keys[b_as_list.index(data)]] = dec
             data_file.append(dic)
     if len(data_file) < 2:
         print ("Arquivo nao contem dados. Verifique se ha dados no site!")
