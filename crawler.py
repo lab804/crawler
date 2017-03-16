@@ -7,7 +7,7 @@ import getpass
 from pprint import pprint
 import pymongo
 import dateutil.parser as parser
-import datetime
+from datetime import datetime
 
 # sessao global
 session = requests.Session()
@@ -97,9 +97,10 @@ def ler_email(imap, link_re, num):
 def download_arquivo(url):
     """realiza o download do arquivo que contem
     os dados metereologicos daquela estacao"""
-    linkname = url.split('/')[-1]
+    url_str= (b''.join(url).decode())
+    linkname = url_str.split('/')[-1]
     local_filename = ('arq/'+linkname+'.csv')
-    r = session.get(url, stream=True)
+    r = session.get(url_str, stream=True)
     with open(local_filename, 'wb') as f:
         for chunk in r.iter_content(chunk_size=1024):
             if chunk:
@@ -118,11 +119,13 @@ def ler_arquivo(content, num, imap):
                 return keys
             else:
                 print("Arquivo nao foi lido. Download já foi realizado ou a sessao expirou!")
+                return False
         else:
             print("Arquivo vazio!")
+            return False
     else:
         print("Arquivo nao existe. Verifique se o nome ou diretório esta correto!")
-    return False
+        return False
 
 def parsea_dados(keys, content):
     """limpamos os dados e estruturamos de uma forma
@@ -136,19 +139,19 @@ def parsea_dados(keys, content):
             for data in b_as_list:
                 if data:
                     dec = data.decode()
-                    if date.findall()
                     if len(dec) == 21:
-                        print("funcionou")
-                        date = (parser.parse(dec))
-                        print(date.isoformat())
-                        dh = date.isoformat()
-                        dic[keys[b_as_list.index(data)]] = dh
+                        if datetime.strptime(dec.split()[0],"%Y-%m-%d"):
+                            date = (parser.parse(dec))
+                            dh = date.isoformat()
+                            dic[keys[b_as_list.index(data)]] = dh
+                        else:
+                            dic[keys[b_as_list.index(data)]] = dec
                     else:
-                        dec = data.decode()
                         dic[keys[b_as_list.index(data)]] = dec
             data_file.append(dic)
     if len(data_file) < 2:
         print ("Arquivo nao contem dados. Verifique se ha dados no site!")
+        return False
     else:
         del data_file[0]
         # print(data_file)
@@ -169,30 +172,28 @@ def conecta_mongodb(document_name, collection_name):
 def ultima_data(collection):
      """retorna dicionario com o ultimo documento inserido
      no banco de dados"""
-     results = collection.find().limit(2).sort([("datahora", pymongo.DESCENDING)])
+     results = collection.find().limit(1).sort([("datahora", pymongo.DESCENDING)])
      if results.count()>0:
          for record in results:
-             return record
+             return record['datahora']
      else:
          return False
 
 def busca_registro(registro, data_hora=None):
-    "busca no arquivo csv o dado anterior salvo no banco de dados: caso\
-    tenha sucesso, apaga os dados anteriores; caso contrario, returna erro"
-    for item in registro:
-        print ('+++++++++++++++++++item +++++++++++++++++++++++++')
-        print(item)
-        item = item['datahora']
-        print(item)
-        print ('+++++++++++++++++++++ data hora+++++++++++++++++++++++')
-        print(data_hora)
-        if data_hora:
-        # if item['datahora'] == data_hora:
-            print("Achei esta ultima data")
-            return True
-        else:
-            print("Nao achei esta ultima data")
-            return False
+    "busca no arquivo csv o dado anterior salvo no banco de dados: caso"
+    "tenha sucesso, apaga os dados anteriores; caso contrario, returna erro"
+    if registro:
+        for item in registro:
+            item = item['datahora']
+            if data_hora:
+                print("Achei esta ultima data")
+                return True
+            else:
+                print("Nao achei esta ultima data")
+                return False
+    else:
+        print("Arquivo nao contem dados da estacao")
+        return False
 
 def imprime_mongodb(collection):
     cursor = collection.find({})
@@ -255,36 +256,42 @@ def main():
             status, data = imap.search(None, FROM)
             for num in reversed(data[0].split()):
                 data = ler_email(imap, link_re, num)
+                print(data)
                 link_download = link_re.findall(data)
-                url_str= (b''.join(link_download).decode())
-                isdownload = download_arquivo(url_str)
+                print(link_download)
+                isdownload = download_arquivo(link_download)
+                document_name = 'teste'
+                collection_name = 'service'
+                database = conecta_mongodb(document_name, collection_name)
                 if isdownload:
                     print("Sucesso no download do arquivo csv")
                     isvalid = ler_arquivo(isdownload, num, imap)
                     if isvalid:
-                        document_name = 'teste'
-                        collection_name = 'service'
-                        database = conecta_mongodb(document_name, collection_name)
                         if database:
                             ultimo_registro = ultima_data(database)
-                            dados = parsea_dados(isvalid, isdownload)
-                            # print(dados)
+                            collection_dados = parsea_dados(isvalid, isdownload)
                             if not ultimo_registro:
                                 print("Não ha registros anteriores no MongoDB. O arquivo de dados será lido por completo!")
-                                registrar = inserir_dados(database, dados)
+                                registrar = inserir_dados(database, collection_dados)
                                 deletar_email(registrar, imap, num)
                             else:
                                 print("Ultimo registro encontrado. O arquivo de dados será lido a partir da ultima data registrada no MongoDB")
-                                registro = busca_registro(dados, ultimo_registro)
+                                registro = busca_registro(collection_dados, ultimo_registro)
                                 if registro:
-                                    registrar = inserir_dados(database, dados)
+                                    registrar = inserir_dados(database, collection_dados)
                                     deletar_email(registrar, imap, num)
-                                else:
-                                    print("A busca pelo dados do ultimo registro nao teve sucesso!")
                         else:
-                            print("Erro ao se conectar com o MongoDB")
+                            print("A busca pelo dados do ultimo registro nao teve sucesso!")
+                            print("+++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++")
+                            deletar_email(True, imap, num)
                     else:
                         print("Arquivo invalido")
+                        deletar_email(True, imap, num)
+                else:
+                    print("Erro ao se conectar com o MongoDB")
+                    deletar_email(True, imap, num)
+            print("Os dados do banco de dados serao impressos")
+            imprime_mongodb(database)
         else:
             print("Nao ha emails na caixa de entrada!")
 

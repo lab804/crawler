@@ -1,0 +1,18 @@
+﻿<div class="alert alert-danger"><b>Barbara você já realizou download deste arquivo,
+			caso você queira realizar novo download,
+			por favor preencha os dados abaixo.</b></div>
+<!DOCTYPE html PUBLIC "-//W3C//DTD XHTML 1.0 Transitional//EN" "http://www.w3.org/TR/xhtml1/DTD/xhtml1-transitional.dtd">
+<html xmlns="http://www.w3.org/1999/xhtml">
+
+	<!-- Bootstrap Css -->
+	<link href="http://www.cemaden.gov.br/template/css/bootstrap.min.css" rel="stylesheet" media="screen">
+
+	<head>
+		<meta http-equiv="Content-Type" content="text/html; charset=utf-8" />
+		<title>Baixar dados</title>
+		<!-- jQuery - Latest compiled and minified jQuery -->
+		<script type="text/javascript" src="https://code.jquery.com/jquery-2.2.3.min.js"></script>
+		<script language="javascript">
+			var cid = new Array();
+			function leCidades() {
+				 cid[0] = new Array("AC","RIO BRANCO","28");  cid[1] = new Array("AL","ÁGUA BRANCA","4910");  cid[2] = new Array("AL","ARAPIRACA","5165");  cid[3] = new Array("AL","BARRA DE SÃO MIGUEL","5296");  cid[4] = new Array("AL","BELO MONTE","5053");  cid[5] = new Array("AL","BRANQUINHA","5273");  cid[6] = new Array("AL","CAJUEIRO","5266");  cid[7] = new Array("AL","CAMPESTRE","5415");  cid[8] = new Array("AL","CANAPI","4981");  cid[9] = new Array("AL","CAPELA","5271");  cid[10] = new Array("AL","CRAÍBAS","5134");  cid[11] = new Array("AL","DELMIRO GOUVEIA","4864");  cid[12] = new Array("AL","ESTRELA DE ALAGOAS","5146");  cid[13] = new Array("AL","GIRAU DO PONCIANO","5124");  cid[14] = new Array("AL","INHAPI","4951");  cid[1
