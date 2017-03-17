@@ -8,6 +8,7 @@ from pprint import pprint
 import pymongo
 import dateutil.parser as parser
 from datetime import datetime
+import time
 
 # sessao global
 session = requests.Session()
@@ -255,6 +256,7 @@ def main():
         if inbox != 0:
             status, data = imap.search(None, FROM)
             for num in reversed(data[0].split()):
+                time.sleep(3)
                 data = ler_email(imap, link_re, num)
                 print(data)
                 link_download = link_re.findall(data)
@@ -279,6 +281,8 @@ def main():
                                 registro = busca_registro(collection_dados, ultimo_registro)
                                 if registro:
                                     registrar = inserir_dados(database, collection_dados)
+                                    deletar_email(registrar, imap, num)
+                                else:
                                     deletar_email(registrar, imap, num)
                         else:
                             print("A busca pelo dados do ultimo registro nao teve sucesso!")
