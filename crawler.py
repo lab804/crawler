@@ -143,12 +143,12 @@ def parsea_dados(keys, content):
                     if len(dec) == 21:
                         if datetime.strptime(dec.split()[0],"%Y-%m-%d"):
                             date = (parser.parse(dec))
-                            dh = date.isoformat()
-                            dic[keys[b_as_list.index(data)]] = dh
+                            dic[keys[b_as_list.index(data)]] =  date.isoformat()
                         else:
                             dic[keys[b_as_list.index(data)]] = dec
                     else:
                         dic[keys[b_as_list.index(data)]] = dec
+
             data_file.append(dic)
     if len(data_file) < 2:
         print ("Arquivo nao contem dados. Verifique se ha dados no site!")
@@ -176,7 +176,8 @@ def ultima_data(collection):
      results = collection.find().limit(1).sort([("datahora", pymongo.DESCENDING)])
      if results.count()>0:
          for record in results:
-             return record['datahora']
+             print (record)
+             return record
      else:
          return False
 
@@ -200,6 +201,16 @@ def imprime_mongodb(collection):
     cursor = collection.find({})
     for document in cursor:
         pprint(document)
+
+def ajustar_dic(documento):
+    for dado in documento:
+        item = dado['latitude']
+        item2 = dado['longitude']
+        dado['latitude'] = float(item.replace(",","."))
+        dado['longitude'] = float(item2.replace(",","."))
+        # print(dado['latitude'])
+        # print(dado['longitude'])
+    return documento
 
 def inserir_dados(collection, documento):
     """insere o documento no banco de dados"""
@@ -264,23 +275,25 @@ def main():
                 isdownload = download_arquivo(link_download)
                 document_name = 'teste'
                 collection_name = 'service'
-                database = conecta_mongodb(document_name, collection_name)
+                collection_dados = conecta_mongodb(document_name, collection_name)
                 if isdownload:
                     print("Sucesso no download do arquivo csv")
                     isvalid = ler_arquivo(isdownload, num, imap)
                     if isvalid:
-                        if database:
-                            ultimo_registro = ultima_data(database)
-                            collection_dados = parsea_dados(isvalid, isdownload)
+                        if collection_dados:
+                            ultimo_registro = ultima_data(collection_dados)
+                            database = parsea_dados(isvalid, isdownload)
                             if not ultimo_registro:
                                 print("Não ha registros anteriores no MongoDB. O arquivo de dados será lido por completo!")
-                                registrar = inserir_dados(database, collection_dados)
+                                new_database = ajustar_dic(database)
+                                registrar = inserir_dados(collection_dados, new_database)
                                 deletar_email(registrar, imap, num)
                             else:
                                 print("Ultimo registro encontrado. O arquivo de dados será lido a partir da ultima data registrada no MongoDB")
-                                registro = busca_registro(collection_dados, ultimo_registro)
+                                registro = busca_registro(database, ultimo_registro)
                                 if registro:
-                                    registrar = inserir_dados(database, collection_dados)
+                                    new_database = ajustar_dic(database)
+                                    registrar = inserir_dados(collection_dados, new_database)
                                     deletar_email(registrar, imap, num)
                                 else:
                                     deletar_email(registrar, imap, num)
@@ -295,7 +308,7 @@ def main():
                     print("Erro ao se conectar com o MongoDB")
                     deletar_email(True, imap, num)
             print("Os dados do banco de dados serao impressos")
-            imprime_mongodb(database)
+            imprime_mongodb(collection_dados)
         else:
             print("Nao ha emails na caixa de entrada!")
 
