@@ -59,7 +59,14 @@ def preenche_formulario(formulario):
     """preenche formulario para receber o email"""
     response = session.get(formulario)
     if response.status_code == 200:
-        return True
+        if "SMTP" in response.content:
+            print("Erro de SMTP. Site esta temporariamente dora do ar")
+            return False
+        elif "Erro" in response.content:
+            print("Codigo de captcha inválido")
+            return False
+        else:
+            return True
     else:
         print("Formulario contem erros. Tente novamente...")
         return False
@@ -141,10 +148,17 @@ def parsea_dados(keys, content):
                 if data:
                     dec = data.decode()
                     if len(dec) == 21:
+                        print(dec.split()[0])
+                        print(dec.split()[1])
                         if datetime.strptime(dec.split()[0],"%Y-%m-%d"):
-                            date = (parser.parse(dec))
-                            dh = date.isoformat()
-                            dic[keys[b_as_list.index(data)]] = dh
+                            dic[keys[b_as_list.index(data)]] = dec.isoformat()
+                            print(dec.isoformat())
+                            # if datetime.strptime(dec.split()[1], "%H:%M:%S"):
+                            #     dic[keys[b_as_list.index(data)]] = dec.isoformat()
+                            #     print(dec.isoformat())
+                            # else:
+                            #     print("Hora invalida ou imcompleta")
+                            #     pass
                         else:
                             dic[keys[b_as_list.index(data)]] = dec
                     else:
@@ -217,7 +231,7 @@ def deletar_email(registrar, imap, num):
         print("Dados inseridos com sucesso no MongoDB")
         imap.store(num, '+FLAGS', r'\Deleted')
         imap.expunge()
-        print("Email contendo arquivo dos dados inseridos foi excluido")
+        print("Email foi excluido com sucesso")
     else:
         print("Ocorreu um erro na insercao do dados no MongoDB")
 
@@ -230,6 +244,7 @@ def main():
     content = acessa_site(base_url)
     if not content:
         return
+    # elif
     else:
         # cities = organiza_dados(content, base_url)
         # for city in cities:
@@ -289,7 +304,7 @@ def main():
                             print("+++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++")
                             deletar_email(True, imap, num)
                     else:
-                        print("Arquivo invalido")
+                        print("Arquivo invalido para leitura")
                         deletar_email(True, imap, num)
                 else:
                     print("Erro ao se conectar com o MongoDB")
