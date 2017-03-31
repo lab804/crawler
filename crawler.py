@@ -9,6 +9,7 @@ import pymongo
 import dateutil.parser as parser
 from datetime import datetime
 import time
+from utils import isodate
 
 # sessao global
 session = requests.Session()
@@ -59,10 +60,10 @@ def preenche_formulario(formulario):
     """preenche formulario para receber o email"""
     response = session.get(formulario)
     if response.status_code == 200:
-        if "SMTP" in response.content:
+        if b"SMTP" in response.content:
             print("Erro de SMTP. Site esta temporariamente dora do ar")
             return False
-        elif "Erro" in response.content:
+        elif b"Erro" in response.content:
             print("Codigo de captcha inválido")
             return False
         else:
@@ -148,10 +149,12 @@ def parsea_dados(keys, content):
                 if data:
                     dec = data.decode()
                     if len(dec) == 21:
-                        if datetime.datetime.strptime(dec,"%Y-%m-%d %H:%M:%S.%f"):
-                            # date = (parser.parse(dec))
-                            date = isodate.datetime_isoformat(dec)
-                            dic[keys[b_as_list.index(data)]] =  date
+                        if datetime.strptime(dec,"%Y-%m-%d %H:%M:%S.%f"):
+                            date = (parser.parse(dec))
+                            # date = isodate.datetime_isoformat(dec)
+                            dic[keys[b_as_list.index(data)]] =   isodate.Isodate(date)
+                            # date.isoformat()
+                            print(dic[keys[b_as_list.index(data)]])
                         else:
                             dic[keys[b_as_list.index(data)]] = dec
                     else:
@@ -216,13 +219,10 @@ def ajustar_dic(documento):
         item2 = dado['longitude']
         dado['latitude'] = float(item.replace(",","."))
         dado['longitude'] = float(item2.replace(",","."))
-        item3 = dado['datahora']
-        # datestring, timestring = re.split('T|', item3)
-        # tmpdate = isodate.parse_date(datestring)
-        # tmptime = isodate.parse_time(timestring)
-        # dado['datahora'] = datetime.datetime.combine(tmpdate, tmptime)
         # print(dado['latitude'])
         # print(dado['longitude'])
+        print(dado['datahora'])
+        print(dado)
     return documento
 
 def inserir_dados(collection, documento):
@@ -255,24 +255,24 @@ def main():
     if not content:
         return
     else:
-        cities = organiza_dados(content, base_url)
-        for city in cities:
-            url_format = formata_url_path(base_url, city[0], city[1])
-            try:
-                iscaptcha = captura_captcha(url_img)
-                if iscaptcha:
-                    cap = input("Me fale as letras senhorita? ")
-                    print (cap)
-                    url_final = url_format+cap
-                    print(url_final)
-                    isget = preenche_formulario(url_final)
-                    if isget:
-                        salva_captcha_img(cap)
-                        salva_captcha_bd(cap)
-                else:
-                    print("Ops! nao foi possivel baixar o captcha, cheque a url ou se algo mudou no site.")
-            except requests.exceptions.HTTPError as e:
-                    print("%s '%s'" % (e, url))
+        # cities = organiza_dados(content, base_url)
+        # for city in cities:
+        #     url_format = formata_url_path(base_url, city[0], city[1])
+        #     try:
+        #         iscaptcha = captura_captcha(url_img)
+        #         if iscaptcha:
+        #             cap = input("Me fale as letras senhorita? ")
+        #             print (cap)
+        #             url_final = url_format+cap
+        #             print(url_final)
+        #             isget = preenche_formulario(url_final)
+        #             if isget:
+        #                 salva_captcha_img(cap)
+        #                 salva_captcha_bd(cap)
+        #         else:
+        #             print("Ops! nao foi possivel baixar o captcha, cheque a url ou se algo mudou no site.")
+        #     except requests.exceptions.HTTPError as e:
+        #             print("%s '%s'" % (e, url))
         imap = imaplib.IMAP4_SSL(IMAP_SERVER, IMAP_PORT)
         imap_password = getpass.getpass("Enter your password --> ")
         login_email(imap, imap_username, imap_password)
@@ -309,7 +309,7 @@ def main():
                                     registrar = inserir_dados(collection_dados, new_database)
                                     deletar_email(registrar, imap, num)
                                 else:
-                                    deletar_email(registrar, imap, num)
+                                    print("Erro grotesco de pesquisa registro anterior")
                         else:
                             print("A busca pelo dados do ultimo registro nao teve sucesso!")
                             print("+++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++")
@@ -321,7 +321,7 @@ def main():
                     print("Erro ao se conectar com o MongoDB")
                     deletar_email(True, imap, num)
             # print("Os dados do banco de dados serao impressos")
-            # imprime_mongodb(collection_dados)
+            imprime_mongodb(collection_dados)
         else:
             print("Nao ha emails na caixa de entrada!")
 
